@@ -130,7 +130,6 @@ int main(int argc, char *argv[]){
 		do{
 			received = 0;
 			totalReceived = 0;
-			//for (int i = 0; i < sizeof(inputStringBuffer); i++) inputStringBuffer[i] = 0;
 
 			// receive frame bit string, received may not receive the whole frame at once
 			do{
@@ -138,7 +137,7 @@ int main(int argc, char *argv[]){
 				FD_SET(sockfd, &readfds);
 				select(sockfd, &readfds, NULL, NULL, NULL);
 
-				if (errorType = 'n') {
+				if (errorType == 'n') {
 					bufferSize = sizeof(inputStringBuffer);
 
 					// bytes		what	address where to put bytes received, number of bytes remaining to read, flag stuff
@@ -146,7 +145,7 @@ int main(int argc, char *argv[]){
 					received = recv(sockfd, inputStringBuffer + totalReceived, sizeof(inputStringBuffer) - totalReceived, 0);
 					totalReceived += received;
 				}
-				else if (errorType = 'h') {
+				else if (errorType == 'h') {
 					bufferSize = sizeof(inputStringBufferHamming);
 
 					// bytes		what	address where to put bytes received, number of bytes remaining to read, flag stuff
@@ -154,7 +153,7 @@ int main(int argc, char *argv[]){
 					received = recv(sockfd, inputStringBufferHamming + totalReceived, sizeof(inputStringBufferHamming) - totalReceived, 0);
 					totalReceived += received;
 				}
-				else if (errorType = 'c') {
+				else if (errorType == 'c') {
 					bufferSize = sizeof(inputStringBufferCrc);
 
 					// bytes		what	address where to put bytes received, number of bytes remaining to read, flag stuff
@@ -170,13 +169,13 @@ int main(int argc, char *argv[]){
 			
 			if (totalReceived){
 
-				if (errorType = 'n') {
+				if (errorType == 'n') {
 					inputString.assign(inputStringBuffer, totalReceived);
 				}
-				else if (errorType = 'h') {
+				else if (errorType == 'h') {
 					inputString.assign(inputStringBufferHamming, totalReceived);
 				}
-				else if (errorType = 'c') {
+				else if (errorType == 'c') {
 					inputString.assign(inputStringBufferCrc, totalReceived);
 				}
 				
@@ -184,13 +183,9 @@ int main(int argc, char *argv[]){
 				// bit string to frame
 				unsigned char* frame;	// [SYN|SYN|length|64-byte data]
 				
-				if (errorType = 'n') {
-					frame = bitStringToFrame(inputString, totalReceived / 8);
-				}
-				else if (errorType = 'h') {
-					//frame = bitStringToFrame(inputString, totalReceived / 12);
-				}
-				else if (errorType = 'c') {
+				if (errorType == 'n') frame = bitStringToFrame(inputString, totalReceived / 8);
+				else if (errorType == 'h') frame = hammingBitStringToFrame(inputString, (4 + ((totalReceived - 32) / 12)), frameNumber);
+				else if (errorType == 'c') {
 					//frame = bitStringToFrame(inputString, totalReceived / 8);
 				}
 				

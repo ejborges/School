@@ -26,7 +26,7 @@ File:			main (client) .cpp
 
 using namespace std;
 
-bool socketsEnabled = false;
+bool socketsEnabled = true;
 
 char const arg_help[] = "help";
 char const arg_c[] = "c";
@@ -151,14 +151,22 @@ int main(int argc, char *argv[]){
 			else if (errorType == 'h') bitString = frameToHammingBitString(frame, frameLength);
 			else if (errorType == 'c');
 			
-			//cout << bitString << "\n\n";
+			
 
 			// Testing receiver procedure
+
+			//cout << bitString << "\n\n"; 
+			/*
+			if (bitString.at(37) == '1') bitString.at(37) = '0';
+			else						 bitString.at(37) = '1';
+			if (bitString.at(40) == '1') bitString.at(40) = '0';
+			else						 bitString.at(40) = '1';
 			if (errorType == 'n') frame = bitStringToFrame(bitString, frameLength);
 			else if (errorType == 'h') frame = hammingBitStringToFrame(bitString, frameLength, frameNumber);
 			else if (errorType == 'c');
 			frame = stripParity(frame);
 			cout << readFrame(frame);
+			*/
 
 			delete[] frame;
 

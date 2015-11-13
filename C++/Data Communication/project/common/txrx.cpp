@@ -9,6 +9,7 @@ File:			txrx (library) .cpp
 
 #include <string>
 #include <iostream>
+#include "txrx.h"
 
 unsigned char *makeFrame(unsigned char* buffer, int bufferLength, int bufferPosition, int errorType){
 
@@ -139,7 +140,7 @@ std::string frameToHammingBitString(unsigned char* frame, int frameLength) {
 
 	// frame message to hamming code to bit string
 	for (int byte = 4; byte < frameLength; byte++) {
-		string += getHammingByte(frame[byte]);
+		string += generateHammingByteBitString(frame[byte]);
 	}
 		
 	return string;
@@ -166,82 +167,73 @@ unsigned char *hammingBitStringToFrame(std::string string, int frameLength, int 
 
 		// fill the byte
 		for (int bit = 0; bit < 8; bit++)
-			if (string.at(byte * 8 + (7 - bit)) == '1') frame[byte] |= (1 << (7 - bit));
+			if (string.at(byte * 8 + bit) == '1') frame[byte] |= (1 << bit);
 	}
 
 	// add the rest of the bytes to frame
 	// detect any 1-bit errors in each byte, report bit error location, fix single bit error
-	for (int hammingByte = 4; hammingByte < frameLength; hammingByte++) {
-
-		char dataBits = 0;
-		std::string tempBitString = "";
+	for (int hammingByte = 0; hammingByte < (frameLength - 4); hammingByte++) {
 
 		// clear the byte
-		frame[hammingByte] = 0;
+		//frame[hammingByte + 4] = 0;
 
-
-
-
-
-		// hamming = p1 p2 b0 p4 b1 b2 b3 p8 b4 b5 b6 b7
-
-		// grab data bits from hamming byte
-		/*for (int hammingCharBit = 2, int j = 0; hammingCharBit < 12; hammingCharBit++) {
-			if (hammingCharBit == 3 || hammingCharBit == 7) continue;
-			if (string.at(32 + ((hammingByte - 4) * 12) + hammingCharBit) == '1') dataBits |= (1 << j);
-			j++;
-		}
-
-		// run dataBits through Hamming parity check to find any errors
-
-		// hamming = p1 p2 b0 p4 b1 b2 b3 p8 b4 b5 b6 b7
+		//                0  1  2  3  4  5  6  7  8  9  10 11
+		// hamming byte = p1 p2 b0 p4 b1 b2 b3 p8 b4 b5 b6 b7
 
 		int p1, p2, p4, p8;
 		p1 = p2 = p4 = p8 = 0;
 
 		// count 1's for p1
-		for (int i = 0; i < 8; i++) {
-			if (i == 2 || i == 5 || i == 7) continue;
-			if (character & (1 << i)) p1++;
+		for (int i = 0; i < 12; i++) {
+			if (i % 2) continue;
+			if (string.at(32 + (hammingByte * 12) + i) == '1') p1++;
 		}
 
 		// count 1's for p2
-		for (int i = 0; i < 8; i++) {
-			if (i == 1 || i == 4 || i == 7) continue;
-			if (character & (1 << i)) p2++;
+		for (int i = 1; i < 12; i++) {
+			if (i == 3 || i == 7 || i == 11) { i++; continue; }
+			if (string.at(32 + (hammingByte * 12) + i) == '1') p2++;
 		}
 
 		// count 1's for p4
-		for (int i = 1; i < 8; i++) {
-			if (i == 4 || i == 5 || i == 6) continue;
-			if (character & (1 << i)) p4++;
+		for (int i = 3; i < 12; i++) {
+			if (i == 7) { i += 3; continue; }
+			if (string.at(32 + (hammingByte * 12) + i) == '1') p4++;
 		}
 
 		// count 1's for p8
-		for (int i = 4; i < 8; i++) {
-			if (character & (1 << i)) p8++;
+		for (int i = 7; i < 12; i++) {
+			if (string.at(32 + (hammingByte * 12) + i) == '1') p8++;
 		}
 
-		// odd parity, so if even # of 1's, p1 = 1 to keep odd parity
+		// check parity bits and see if they're correct (odd parity)
+		int corruptBit = 0;
+		if (!(p1 % 2)) corruptBit += 1;
+		if (!(p2 % 2)) corruptBit += 2;
+		if (!(p4 % 2)) corruptBit += 4;
+		if (!(p8 % 2)) corruptBit += 8;
 
-		// write p1
-		if (p1 % 2) string += "0";
-		else		string += "1";
+		// if there was a corrupt bit
+		if (corruptBit) {
+			if (corruptBit > 12) {
+				char c = bitStringHammingByteToChar(string, (32 + (hammingByte * 12)));
+				c &= 127;
+				std::cout << "\n\tUnfixable error in frame " << frameNumber << " byte " << (hammingByte + 4) << ": '" << c << "'\n\n";
+			}
+			else {
+				std::cout << "\n\tFixed error in frame " << frameNumber << " byte " << (hammingByte + 4) << " bit " << (corruptBit - 1) << "\n\n";
 
-		// write p2
-		if (p2 % 2) string += "0";
-		else		string += "1";*/
+				// fix corruptBit
+				if (string.at(32 + (hammingByte * 12) + (corruptBit - 1)) == '1') string.at(32 + (hammingByte * 12) + (corruptBit - 1)) = '0';
+				else															  string.at(32 + (hammingByte * 12) + (corruptBit - 1)) = '1';
+			}
+		}
 
-
-
-
-		// fill the byte
-		//for (int bit = 0; bit < 8; bit++)
-		//	if (string.at(hammingByte * 8 + (7 - bit)) == '1') frame[hammingByte] |= (1 << (7 - bit));
+		// extract character from hamming byte (this char still has parity bit btw, remove it with stripParity(frame) )
+		frame[hammingByte + 4] = bitStringHammingByteToChar(string, (32 + (hammingByte * 12)));
 	}
 
 	return frame;
-
 }
 
 
@@ -255,15 +247,15 @@ unsigned char *hammingBitStringToFrame(std::string string, int frameLength, int 
 
 
 // convert byte in bit string format to char
-unsigned char bitStringByteToChar(std::string string, int end) {
+unsigned char bitStringByteToChar(std::string string, int endPos) {
 
-	if (end < 7) return '!';
+	if (endPos < 7) return '!';
 
 	unsigned char character = 0;
 
 	// fill the byte
 	for (int bit = 0; bit < 8; bit++)
-		if (string.at(end - bit) == '1') character |= (1 << (7 - bit));
+		if (string.at(endPos - bit) == '1') character |= (1 << (7 - bit));
 
 	//strip parity
 	character &= 127;
@@ -271,12 +263,29 @@ unsigned char bitStringByteToChar(std::string string, int end) {
 	return character;
 }
 
+// grab the char encoded in a hamming bit string
+unsigned char bitStringHammingByteToChar(std::string string, int startPos) {
 
+	unsigned char character = 0;
+
+	//           0  1  2  3  4  5  6  7  8  9  10 11
+	// hamming = p1 p2 b0 p4 b1 b2 b3 p8 b4 b5 b6 b7
+
+	// fill the byte
+	for (int hammingBit = 2, charBit = 0; hammingBit < 12; hammingBit++) {
+		if (hammingBit == 3 || hammingBit ==7) continue;
+		if (string.at(startPos + hammingBit) == '1') character |= (1 << charBit);
+		charBit++;
+	}
+
+	return character;
+}
 
 // generate a 12-bit hamming byte from char
-std::string getHammingByte(char character) {
+std::string generateHammingByteBitString(char character) {
 	std::string string = "";
 
+	//           0  1  2  3  4  5  6  7  8  9  10 11
 	// hamming = p1 p2 b0 p4 b1 b2 b3 p8 b4 b5 b6 b7
 
 	int p1, p2, p4, p8;
@@ -361,91 +370,3 @@ std::string getHammingByte(char character) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-/*// hamming = p1 p2 b0 p4 b1 b2 b3 p8 b4 b5 b6 b7
-
-	int p1, p2, p4, p8;
-	p1 = p2 = p4 = p8 = 0;
-
-	// count 1's for p1
-	for (int i = 0; i < 8; i++) {
-		if (i == 2 || i == 5 || i == 7) continue;
-		if (frame[byte] & (1 << i)) p1++;
-	}
-
-	// count 1's for p2
-	for (int i = 0; i < 8; i++) {
-		if (i == 1 || i == 4 || i == 7) continue;
-		if (frame[byte] & (1 << i)) p2++;
-	}
-
-	// count 1's for p4
-	for (int i = 1; i < 8; i++) {
-		if (i == 4 || i == 5 || i == 6) continue;
-		if (frame[byte] & (1 << i)) p4++;
-	}
-
-	// count 1's for p8
-	for (int i = 4; i < 8; i++) {
-		if (frame[byte] & (1 << i)) p8++;
-	}
-
-	// odd parity, so if even # of 1's, p1 = 1 to keep odd parity
-
-	// write p1
-	if (p1 % 2) string += "0";
-	else		string += "1";
-
-	// write p2
-	if (p2 % 2) string += "0";
-	else		string += "1";
-
-	// write bit 0
-	if (frame[byte] & (1 << 0)) string += "1";
-	else						string += "0";
-
-	// write p4
-	if (p4 % 2) string += "0";
-	else		string += "1";
-
-	// write bit 1
-	if (frame[byte] & (1 << 1)) string += "1";
-	else						string += "0";
-
-	// write bit 2
-	if (frame[byte] & (1 << 2)) string += "1";
-	else						string += "0";
-
-	// write bit 3
-	if (frame[byte] & (1 << 3)) string += "1";
-	else						string += "0";
-
-	// write p8
-	if (p8 % 2) string += "0";
-	else		string += "1";
-
-	// write bit 4
-	if (frame[byte] & (1 << 4)) string += "1";
-	else						string += "0";
-
-	// write bit 5
-	if (frame[byte] & (1 << 5)) string += "1";
-	else						string += "0";
-
-	// write bit 6
-	if (frame[byte] & (1 << 6)) string += "1";
-	else						string += "0";
-
-	// write bit 7
-	if (frame[byte] & (1 << 7)) string += "1";
-	else						string += "0";*/

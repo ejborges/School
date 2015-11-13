@@ -34,10 +34,12 @@ unsigned char *hammingBitStringToFrame(std::string string, int frameLength, int 
 // Extra Functions
 
 // convert byte in bit string format to char
-unsigned char bitStringByteToChar(std::string string, int end);
+unsigned char bitStringByteToChar(std::string string, int endPos);
+
+unsigned char bitStringHammingByteToChar(std::string string, int startPos);
 
 // generate a 12-bit hamming byte from char
-std::string getHammingByte(char character);
+std::string generateHammingByteBitString(char character);
 
 #endif	// end of include guard
 // No other code should go after this line
