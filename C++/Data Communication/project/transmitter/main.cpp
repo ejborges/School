@@ -37,6 +37,7 @@ char const arg_hamming[] = "hamming";
 char const arg_n[] = "n";
 char const arg_none[] = "none";
 char errorType;
+int numberOfErrors;
 
 void myExit(){
 	cout << "\n\n</transmitter>\n";
@@ -59,11 +60,13 @@ int main(int argc, char *argv[]){
 			<< "\n\t\t<file>\tis the file to transmit"
 			<< "\n\t\t\tthis argument has to include the file extention\n"
 			<< "\n\t\t<type>\tis the type of error correction you want to use"
-			<< "\n\t\t\toptions: crc, hamming, none";
+			<< "\n\t\t\toptions: crc, hamming, none\n"
+			<< "\n\t\t<errors>\tis the number of bit errors to introduce to each frame"
+			<< "\n\t\t\tthis can be any positive integer value";
 		myExit();
 	}
 
-	if (argc != 5){
+	if (argc != 6){
 		cout << "\tNot the correct arguments. Need <host> <port> <file> <type> <errors> OR help";
 		myExit();
 	}
@@ -76,6 +79,9 @@ int main(int argc, char *argv[]){
 		cout << "\tUnknown <type> \"" << argv[3] << "\"";
 		myExit();
 	}
+
+	// how many errors to cause
+	numberOfErrors = atoi(argv[5]);
 
 	int sockfd; // socket file descriptor
 
@@ -155,6 +161,23 @@ int main(int argc, char *argv[]){
 			if(errorType == 'n') bitString = frameToBitString(frame, frameLength);
 			else if (errorType == 'h') bitString = frameToHammingBitString(frame, frameLength);
 			else if (errorType == 'c') bitString = frameToCrcBitString(frame, frameLength);
+
+			// cause numberOfErrors to random bits in the message/data portion of the bitString 
+			for (int i = 0; i < numberOfErrors; i++){
+				if (errorType == 'n' || errorType == 'c') {
+					int random = (rand() % ((frameLength - 4) * 8)) + 32;
+					cout << "\t\tIntroduced error in frame " << frameNumber << " byte " << random / 8 << " bit " << random % 8 << endl;
+					if (bitString.at(random) == '1') bitString.at(random) = '0';
+					else							 bitString.at(random) = '1';
+				}
+				else if (errorType == 'h') {
+					int random = (rand() % ((frameLength - 4) * 12)) + 32;
+					cout << "\t\tIntroduced error in frame " << frameNumber << " byte " << random / 12 << " bit " << random % 12 << "\trandom = " << random << endl;
+					if (bitString.at(random) == '1') bitString.at(random) = '0';
+					else							 bitString.at(random) = '1';
+				}
+			}
+			
 			
 			
 

@@ -214,10 +214,10 @@ unsigned char *hammingBitStringToFrame(std::string string, int frameLength, int 
 			if (corruptBit > 12) {
 				char c = bitStringHammingByteToChar(string, (32 + (hammingByte * 12)));
 				c &= 127;
-				std::cout << "\n\t\tUnfixable error in frame " << frameNumber << " byte " << (hammingByte + 4) << ": '" << c << "'\n";
+				std::cout << "\t\tUnfixable error in frame " << frameNumber << " byte " << (hammingByte + 4) << ": '" << c << "'\n";
 			}
 			else {
-				std::cout << "\n\t\tFixed error in frame " << frameNumber << " byte " << (hammingByte + 4) << " bit " << (corruptBit - 1) << "\n";
+				std::cout << "\t\tFixed error in frame " << frameNumber << " byte " << (hammingByte + 4) << " bit " << (corruptBit - 1) << "\n";
 
 				// fix corruptBit
 				if (string.at(32 + (hammingByte * 12) + (corruptBit - 1)) == '1') string.at(32 + (hammingByte * 12) + (corruptBit - 1)) = '0';
@@ -276,7 +276,7 @@ unsigned char *crcBitStringToFrame(std::string string, int frameLength, int fram
 			if (string.at(byte * 8 + (7 - bit)) == '1') frame[byte] |= (1 << (7 - bit));
 	}
 
-	if (makeCRC(string.substr(32, -1)) != "0000000000000000") std::cout << "\n\t\tError detected in frame " << frameNumber << "\n";
+	if (makeCRC(string.substr(32, -1)) != "0000000000000000") std::cout << "\t\tError detected in frame " << frameNumber << "\n";
 
 	return frame;
 
