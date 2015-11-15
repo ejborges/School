@@ -46,6 +46,25 @@ Once opened in VisualStudio, you can compile the source code to generate your ow
 
 
 
+[Known Issues while Compiling]
+
+While compiling, the following error appears: "error MSB8020: The build tools for Visual Studio 20xx (Platform Toolset='vxxx') cannot be found. ..." 
+
+This is because visual studio is trying to compile the project with a build tool that is not installed. 
+
+To fix this, in Visual Studio, go to the Solution Explorer and, if you have this project's solution open, you should see three projects inside named "common", "receiver", and "transmitter". For each of these projects, do the following:
+	1. Right click on the project and select "Properties" (last option)
+	2. On the left panel, under "Configuration Properties" select "General"
+	3. Now, on the right panel, look for the setting named "Platform Toolset" and 
+	   edit its value to be for the Visual Studio version you have installed
+	   (e.g. "Visual Studio 2013 (v120)")
+	4. Do this for all other projects in this solution
+	5. The solution should compile now :)
+
+
+
+
+
 
 
 

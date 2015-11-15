@@ -4,6 +4,7 @@ Date:			Oct. 8, 2015
 Class:			EECS 3150 Data Communications
 Project:		Socket Tx/Rx
 
+VS Project:		transmitter
 File:			main (client) .cpp
 */
 
@@ -44,7 +45,7 @@ void myExit(){
 	exit(0);
 }
 
-//Arguments needed: transmitter.exe <host> <port> <file> <type> | help
+//Arguments needed: transmitter.exe <host> <port> <file> <type> <errors> OR help
 int main(int argc, char *argv[]){
 
 	cout << "\n<transmitter>\n\n";
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]){
 	}
 
 	if (argc != 5){
-		cout << "\tNot the correct arguments. Need <host> <port> <file> <type> | help";
+		cout << "\tNot the correct arguments. Need <host> <port> <file> <type> <errors> OR help";
 		myExit();
 	}
 
@@ -71,6 +72,10 @@ int main(int argc, char *argv[]){
 	if (strcmp(argv[4], arg_c) == 0 || strcmp(argv[4], arg_crc) == 0) errorType = 'c';
 	else if (strcmp(argv[4], arg_h) == 0 || strcmp(argv[4], arg_hamming) == 0) errorType = 'h';
 	else if (strcmp(argv[4], arg_n) == 0 || strcmp(argv[4], arg_none) == 0) errorType = 'n';
+	else {
+		cout << "\tUnknown <type> \"" << argv[3] << "\"";
+		myExit();
+	}
 
 	int sockfd; // socket file descriptor
 
@@ -124,7 +129,7 @@ int main(int argc, char *argv[]){
 		// print buffer content:
 		//cout.write(tx.fileBuffer, tx.fileLength);
 
-		unsigned char* frame;	// [SYN|SYN|length|64-byte data]
+		unsigned char* frame;	// [SYN|SYN|length|errorType|64-byte data][CRC|CRC]
 		unsigned int bufferPosition = 0;
 		string bitString;
 		string errorTypeString;
@@ -135,12 +140,12 @@ int main(int argc, char *argv[]){
 
 		do{
 			// create frame and update bufferPosition
-			frame = makeFrame(tx.fileBuffer, tx.fileLength, bufferPosition, errorType);	// frame = [SYN|SYN|length|errorType|64-byte data]
+			frame = makeFrame(tx.fileBuffer, tx.fileLength, bufferPosition, errorType);	// frame = [SYN|SYN|length|errorType|64-byte data][CRC|CRC]
 
 			bufferPosition += frame[2];
 
-			if(errorType == 'n' || errorType == 'h') frameLength = frame[2] + 4;
-			else if (errorType == 'c') frameLength = frame[2] + 6;
+			if(errorType == 'n' || errorType == 'h') frameLength = frame[2] + 4;	// frame = [SYN|SYN|length|errorType|64-byte data]
+			else if (errorType == 'c') frameLength = frame[2] + 6;					// frame = [SYN|SYN|length|errorType|64-byte data|CRC|CRC]
 
 			// add odd parity bit
 			frame = addParity(frame);
@@ -149,23 +154,22 @@ int main(int argc, char *argv[]){
 			// each bit in each char in the frame will be turned into either a '0' or '1' char
 			if(errorType == 'n') bitString = frameToBitString(frame, frameLength);
 			else if (errorType == 'h') bitString = frameToHammingBitString(frame, frameLength);
-			else if (errorType == 'c');
+			else if (errorType == 'c') bitString = frameToCrcBitString(frame, frameLength);
 			
 			
 
 			// Testing receiver procedure
-
-			//cout << bitString << "\n\n"; 
 			/*
+			delete[] frame;			
 			if (bitString.at(37) == '1') bitString.at(37) = '0';
 			else						 bitString.at(37) = '1';
-			if (bitString.at(40) == '1') bitString.at(40) = '0';
-			else						 bitString.at(40) = '1';
+			if (bitString.at(47) == '1') bitString.at(47) = '0';
+			else						 bitString.at(47) = '1';
 			if (errorType == 'n') frame = bitStringToFrame(bitString, frameLength);
 			else if (errorType == 'h') frame = hammingBitStringToFrame(bitString, frameLength, frameNumber);
-			else if (errorType == 'c');
+			else if (errorType == 'c') frame = crcBitStringToFrame(bitString, frameLength, frameNumber);
 			frame = stripParity(frame);
-			cout << readFrame(frame);
+			cout << readFrame(frame, frame[2] + 4);
 			*/
 
 			delete[] frame;

@@ -4,6 +4,7 @@ Date:			Oct. 8, 2015
 Class:			EECS 3150 Data Communications
 Project:		Socket Tx/Rx
 
+VS Project:		receiver
 File:			main (server) .cpp
 */
 
@@ -44,7 +45,7 @@ void myExit(){
 	exit(0);
 }
 
-//Arguments needed: receiver.exe <port> <file> <type> | help
+//Arguments needed: receiver.exe <port> <file> <type> OR help
 int main(int argc, char *argv[]){
 
 	cout << "\n<receiver>\n\n";
@@ -60,7 +61,7 @@ int main(int argc, char *argv[]){
 	}
 
 	if (argc != 4){
-		cout << "\tNot the correct arguments. Need <port> <file> <type> | help";
+		cout << "\tNot the correct arguments. Need <port> <file> <type> OR help";
 		myExit();
 	}
 
@@ -68,6 +69,10 @@ int main(int argc, char *argv[]){
 	if (strcmp(argv[3], arg_c) == 0 || strcmp(argv[3], arg_crc) == 0) errorType = 'c';
 	else if (strcmp(argv[3], arg_h) == 0 || strcmp(argv[3], arg_hamming) == 0) errorType = 'h';
 	else if (strcmp(argv[3], arg_n) == 0 || strcmp(argv[3], arg_none) == 0) errorType = 'n';
+	else {
+		cout << "\tUnknown <type> \"" << argv[3] << "\"";
+		myExit();
+	}
 
 	// initialize winsock stuff
 	WSADATA wsaData;
@@ -185,9 +190,7 @@ int main(int argc, char *argv[]){
 				
 				if (errorType == 'n') frame = bitStringToFrame(inputString, totalReceived / 8);
 				else if (errorType == 'h') frame = hammingBitStringToFrame(inputString, (4 + ((totalReceived - 32) / 12)), frameNumber);
-				else if (errorType == 'c') {
-					//frame = bitStringToFrame(inputString, totalReceived / 8);
-				}
+				else if (errorType == 'c') frame = crcBitStringToFrame(inputString, totalReceived / 8, frameNumber);
 				
 				
 				
@@ -197,7 +200,7 @@ int main(int argc, char *argv[]){
 				bytesReceived += frame[2];
 
 				// read frame
-				outputFile << readFrame(frame);
+				outputFile << readFrame(frame, frame[2] + 4);
 
 				delete[] frame;
 			}
