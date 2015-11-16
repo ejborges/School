@@ -172,7 +172,7 @@ int main(int argc, char *argv[]){
 				}
 				else if (errorType == 'h') {
 					int random = (rand() % ((frameLength - 4) * 12)) + 32;
-					cout << "\t\tIntroduced error in frame " << frameNumber << " byte " << random / 12 << " bit " << random % 12 << "\trandom = " << random << endl;
+					cout << "\t\tIntroduced error in frame " << frameNumber << " byte " << (4 + ((random - 32) / 12)) << " bit " << ((random - 32) % 12) << endl;
 					if (bitString.at(random) == '1') bitString.at(random) = '0';
 					else							 bitString.at(random) = '1';
 				}
