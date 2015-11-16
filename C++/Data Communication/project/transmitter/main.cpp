@@ -10,7 +10,7 @@ File:			main (client) .cpp
 
 #include "txrx.h"
 #include "transmitter.h"
-
+#include <ctime>
 #include <iostream>
 
 // defines constants some includes need
@@ -141,6 +141,7 @@ int main(int argc, char *argv[]){
 		string errorTypeString;
 		int frameLength;
 		int frameNumber = 0;
+		srand(time(0));			// ensure true randomized number in error creation loop, without this, the same "random" numbers will appear every time you run the .exe
 
 		cout << "\tSending...\n";
 
