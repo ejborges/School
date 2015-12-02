@@ -36,6 +36,8 @@ char const arg_h[] = "h";
 char const arg_hamming[] = "hamming";
 char const arg_n[] = "n";
 char const arg_none[] = "none";
+char const arg_d[] = "d";
+char const arg_hdb3[] = "hdb3";
 char errorType;
 int numberOfErrors;
 
@@ -60,8 +62,8 @@ int main(int argc, char *argv[]){
 			<< "\n\t\t<file>\tis the file to transmit"
 			<< "\n\t\t\tthis argument has to include the file extention\n"
 			<< "\n\t\t<type>\tis the type of error correction you want to use"
-			<< "\n\t\t\toptions: crc, hamming, none\n"
-			<< "\n\t\t<errors>\tis the number of bit errors to introduce to each frame"
+			<< "\n\t\t\toptions: crc, hamming, hdb3, none\n"
+			<< "\n\t\t<errors>is the number of bit errors to introduce to each frame"
 			<< "\n\t\t\tthis can be any positive integer value";
 		myExit();
 	}
@@ -75,8 +77,9 @@ int main(int argc, char *argv[]){
 	if (strcmp(argv[4], arg_c) == 0 || strcmp(argv[4], arg_crc) == 0) errorType = 'c';
 	else if (strcmp(argv[4], arg_h) == 0 || strcmp(argv[4], arg_hamming) == 0) errorType = 'h';
 	else if (strcmp(argv[4], arg_n) == 0 || strcmp(argv[4], arg_none) == 0) errorType = 'n';
+	else if (strcmp(argv[4], arg_d) == 0 || strcmp(argv[4], arg_hdb3) == 0) errorType = 'd';
 	else {
-		cout << "\tUnknown <type> \"" << argv[3] << "\"";
+		cout << "\tUnknown <type> \"" << argv[4] << "\"";
 		myExit();
 	}
 
@@ -151,8 +154,8 @@ int main(int argc, char *argv[]){
 
 			bufferPosition += frame[2];
 
-			if(errorType == 'n' || errorType == 'h') frameLength = frame[2] + 4;	// frame = [SYN|SYN|length|errorType|64-byte data]
-			else if (errorType == 'c') frameLength = frame[2] + 6;					// frame = [SYN|SYN|length|errorType|64-byte data|CRC|CRC]
+			if(errorType == 'n' || errorType == 'h' || errorType == 'd') frameLength = frame[2] + 4;	// frame = [SYN|SYN|length|errorType|64-byte data]
+			else if (errorType == 'c') frameLength = frame[2] + 6;										// frame = [SYN|SYN|length|errorType|64-byte data|CRC|CRC]
 
 			// add odd parity bit
 			frame = addParity(frame);
@@ -162,10 +165,11 @@ int main(int argc, char *argv[]){
 			if(errorType == 'n') bitString = frameToBitString(frame, frameLength);
 			else if (errorType == 'h') bitString = frameToHammingBitString(frame, frameLength);
 			else if (errorType == 'c') bitString = frameToCrcBitString(frame, frameLength);
+			else if (errorType == 'd') bitString = frameToHdb3BitString(frame, frameLength);
 
 			// cause numberOfErrors to random bits in the message/data portion of the bitString 
 			for (int i = 0; i < numberOfErrors; i++){
-				if (errorType == 'n' || errorType == 'c') {
+				if (errorType == 'n' || errorType == 'c' || errorType == 'd') {
 					int random = (rand() % ((frameLength - 4) * 8)) + 32;
 					cout << "\t\tIntroduced error in frame " << frameNumber << " byte " << random / 8 << " bit " << random % 8 << endl;
 					if (bitString.at(random) == '1') bitString.at(random) = '0';

@@ -93,7 +93,7 @@ std::string frameToBitString(unsigned char* frame, int frameLength){
 			else						  bitString += "0";
 		}
 
-		return bitString;
+	return bitString;
 }
 
 // creates a frame from a string of 1s and 0s 
@@ -263,7 +263,7 @@ std::string frameToCrcBitString(unsigned char* frame, int frameLength){
 // 
 unsigned char *crcBitStringToFrame(std::string string, int frameLength, int frameNumber){
 
-	unsigned char* frame = new unsigned char[frameLength];	// [SYN|SYN|length|errorType|64-byte data]
+	unsigned char* frame = new unsigned char[frameLength];	// [SYN|SYN|length|errorType|64-byte data|CRC|CRC]
 
 	// add all bytes to frame, except the two crc bytes at the end
 	for (int byte = 0; byte < (frameLength - 2); byte++){
@@ -280,6 +280,157 @@ unsigned char *crcBitStringToFrame(std::string string, int frameLength, int fram
 
 	return frame;
 
+}
+
+// create bit string from frame in HDB3 format
+// each bit in each char in the frame will be turned into either a '0', '+', '-' char
+std::string frameToHdb3BitString(unsigned char* frame, int frameLength) {
+
+	std::string bitString = "";
+	std::string hdb3BitString = "";
+
+	// frame to bit string
+	for (int byte = 0; byte < frameLength; byte++)
+		for (int bit = 0; bit < 8; bit++) {
+			if (frame[byte] & (1 << bit)) bitString += "1";
+			else						  bitString += "0";
+		}
+
+	//char currPulse = '+';			// current  pulse sign (- or +)
+	char prevPulse = '-';			// previous pulse sign (- or +) starts off as '-'
+	int pulseCount = 0;				// the number of '+' or '-' since previous violation
+	int position = 0;				// character pointer in bitString
+	int stringLength = bitString.length();
+
+	// bit string to encoded HDB3 string
+	while (position < stringLength) {
+
+		if (bitString.at(position) == '1')
+		{
+			if (prevPulse == '+') {
+				hdb3BitString += '-';
+				prevPulse = '-';
+			}
+			else {
+				hdb3BitString += '+';
+				prevPulse = '+';
+			}
+			pulseCount++;
+			position++;
+			continue;
+		}
+
+		// check for 0000 condition
+		if (((stringLength - 1) > (position + 3)) &&
+			bitString.at(position + 1) == '0'     &&
+			bitString.at(position + 2) == '0'     &&
+			bitString.at(position + 3) == '0') {
+
+			// if pulseCount is odd
+			if (pulseCount % 2) {
+				// do 000V pattern
+
+				if (prevPulse == '+') {
+					hdb3BitString += "000+";
+					prevPulse = '+';
+					pulseCount = 0;
+					position += 4;
+					continue;
+				}
+				else {
+					hdb3BitString += "000-";
+					prevPulse = '-';
+					pulseCount = 0;
+					position += 4;
+					continue;
+				}
+			}
+			else {
+				// do B00V pattern
+
+				if (prevPulse == '+') {
+					hdb3BitString += "-00-";
+					prevPulse = '-';
+					pulseCount = 0;
+					position += 4;
+					continue;
+				}
+				else {
+					hdb3BitString += "+00+";
+					prevPulse = '+';
+					pulseCount = 0;
+					position += 4;
+					continue;
+				}
+			}
+		}
+
+		hdb3BitString += '0';
+		position++;
+	}
+
+	return hdb3BitString;
+}
+
+// creates a frame from a string of '0', '+', '-' chars
+// "0+-0+000..." to [SYN|SYN|length|64-byte data]
+// byte bits are ordered from least significant bit to most significant bit
+unsigned char *hdb3BitStringToFrame(std::string string, int frameLength) {
+
+	unsigned char* frame = new unsigned char[frameLength];	// [SYN|SYN|length|errorType|64-byte data]
+	std::string bitString = "";								// decoded HDB3 bit string of just '1's and '0's
+	char currPulse;											// current  pulse sign (- or +)
+	char prevPulse = '-';									// previous pulse sign (- or +) starts off as '-'
+	int position = 0;										// character pointer in received HDB3 bit string
+	int hdb3Length = string.length();						// length of <string>
+
+	// decode hdb3 string
+	while (position < hdb3Length) {
+
+		if (string.at(position) == '0') {
+			bitString += '0';
+			position++;
+			continue;
+		}
+
+		currPulse = string.at(position);
+
+		// check for B00V condition 
+		if (((hdb3Length - 1) > (position + 3))   &&
+			string.at(position + 1) == '0'        &&
+			string.at(position + 2) == '0'        &&
+			string.at(position + 3) == currPulse) {
+
+			bitString += "0000";
+			prevPulse = currPulse;
+			position += 4;
+			continue;
+		}
+
+		// check for 000V condition
+		if (currPulse == prevPulse) {
+			bitString += '0';
+			position++;
+			continue;
+		}
+
+		bitString += '1';
+		prevPulse = currPulse;
+		position++;
+	}
+
+	// fill frame bytes from decoded bit string
+	for (int byte = 0; byte < frameLength; byte++) {
+
+		// clear the byte 
+		frame[byte] = 0;
+
+		// fill the byte
+		for (int bit = 0; bit < 8; bit++)
+			if (bitString.at(byte * 8 + (7 - bit)) == '1') frame[byte] |= (1 << (7 - bit));
+	}
+
+	return frame;
 }
 
 

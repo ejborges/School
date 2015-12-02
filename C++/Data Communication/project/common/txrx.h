@@ -33,7 +33,9 @@ unsigned char *hammingBitStringToFrame(std::string string, int frameLength, int 
 std::string frameToCrcBitString(unsigned char* frame, int frameLength);
 unsigned char *crcBitStringToFrame(std::string string, int frameLength, int frameNumber);
 
-
+// frame to/from hdb3 bit string
+std::string frameToHdb3BitString(unsigned char* frame, int frameLength);
+unsigned char *hdb3BitStringToFrame(std::string string, int frameLength);
 
 
 // Extra Functions

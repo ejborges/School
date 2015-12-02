@@ -36,6 +36,8 @@ char const arg_h[] = "h";
 char const arg_hamming[] = "hamming";
 char const arg_n[] = "n";
 char const arg_none[] = "none";
+char const arg_d[] = "d";
+char const arg_hdb3[] = "hdb3";
 char errorType;
 
 void myExit(){
@@ -56,7 +58,7 @@ int main(int argc, char *argv[]){
 			<< "\n\t\t<file>\tis the file to save the received message to"
 			<< "\n\t\t\tthis argument has to include the file extention\n"
 			<< "\n\t\t<type>\tis the type of error correction you want to use"
-			<< "\n\t\t\toptions: crc, hamming, none";
+			<< "\n\t\t\toptions: crc, hamming, none, hdb3";
 		myExit();
 	}
 
@@ -69,6 +71,7 @@ int main(int argc, char *argv[]){
 	if (strcmp(argv[3], arg_c) == 0 || strcmp(argv[3], arg_crc) == 0) errorType = 'c';
 	else if (strcmp(argv[3], arg_h) == 0 || strcmp(argv[3], arg_hamming) == 0) errorType = 'h';
 	else if (strcmp(argv[3], arg_n) == 0 || strcmp(argv[3], arg_none) == 0) errorType = 'n';
+	else if (strcmp(argv[3], arg_d) == 0 || strcmp(argv[3], arg_hdb3) == 0) errorType = 'd';
 	else {
 		cout << "\tUnknown <type> \"" << argv[3] << "\"";
 		myExit();
@@ -142,7 +145,7 @@ int main(int argc, char *argv[]){
 				FD_SET(sockfd, &readfds);
 				select(sockfd, &readfds, NULL, NULL, NULL);
 
-				if (errorType == 'n') {
+				if (errorType == 'n' || errorType == 'd') {
 					bufferSize = sizeof(inputStringBuffer);
 
 					// bytes		what	address where to put bytes received, number of bytes remaining to read, flag stuff
@@ -174,7 +177,7 @@ int main(int argc, char *argv[]){
 			
 			if (totalReceived){
 
-				if (errorType == 'n') {
+				if (errorType == 'n' || errorType == 'd') {
 					inputString.assign(inputStringBuffer, totalReceived);
 				}
 				else if (errorType == 'h') {
@@ -191,6 +194,7 @@ int main(int argc, char *argv[]){
 				if (errorType == 'n') frame = bitStringToFrame(inputString, totalReceived / 8);
 				else if (errorType == 'h') frame = hammingBitStringToFrame(inputString, (4 + ((totalReceived - 32) / 12)), frameNumber);
 				else if (errorType == 'c') frame = crcBitStringToFrame(inputString, totalReceived / 8, frameNumber);
+				else if (errorType == 'd') frame = hdb3BitStringToFrame(inputString, totalReceived / 8);
 				
 				
 				
